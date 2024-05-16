@@ -331,7 +331,7 @@ class Manager {
         if ($protocolVersion == self::VERSION1 ) {
             $command->setCommandMetaData(array_merge($command->getCommandMetaData(), ['handlerId' => $this->ridProvider->getRid()]));
         }
-        if ($protocolVersion == '' . self::VERSION2) {
+        if ($protocolVersion == self::VERSION2) {
             $applicationHeaders->set('handlerId', $this->ridProvider->getRid());
         }
     }
