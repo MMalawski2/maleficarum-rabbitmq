@@ -121,7 +121,7 @@ class Manager {
      *
      *@throws \InvalidArgumentException
      */
-    public function addCommand(\Maleficarum\Command\AbstractCommand $command, string $connectionIdentifier, array $commandHeaders = [], string $protocolVersion) : \Maleficarum\Rabbitmq\Manager\Manager {
+    public function addCommand(\Maleficarum\Command\AbstractCommand $command, string $connectionIdentifier, string $protocolVersion, array $commandHeaders = []) : \Maleficarum\Rabbitmq\Manager\Manager {
         // set test connectionIdentifier
         $connectionIdentifier = $this->getConnectionIdentifier($command, $connectionIdentifier);
 
@@ -134,7 +134,10 @@ class Manager {
         // initialise the connection if necessary
         $connection->connect();
 
+        /** @var PhpAmqpLib\Wire\AMQPTable $applicationHeaders */
         $applicationHeaders = \Maleficarum\Ioc\Container::get('PhpAmqpLib\Wire\AMQPTable', [$commandHeaders]);
+
+        $this->enforceHid($command, $applicationHeaders, $protocolVersion);
 
         // send the command to the message broker
         $message = \Maleficarum\Ioc\Container::get(
@@ -160,7 +163,7 @@ class Manager {
      *
      *@throws \InvalidArgumentException
      */
-    public function addCommands(array $commands, string $connectionIdentifier, array $commandsHeaders = []) : \Maleficarum\Rabbitmq\Manager\Manager {
+    public function addCommands(array $commands, string $connectionIdentifier, string $protocolVersion, array $commandsHeaders = []) : \Maleficarum\Rabbitmq\Manager\Manager {
         // validate commands - set count
         if (count($commands) < 1) throw new \InvalidArgumentException(sprintf('Expected a nonempty array of commands. \%s()', __METHOD__));
 
@@ -185,8 +188,10 @@ class Manager {
 
         // send commands
         $channel = $connection->getChannel();
+        /** @var PhpAmqpLib\Wire\AMQPTable $applicationHeaders */
         $applicationHeaders = \Maleficarum\Ioc\Container::get('PhpAmqpLib\Wire\AMQPTable', [$commandsHeaders]);
         foreach ($commands as $command) {
+            $this->enforceHid($command, $applicationHeaders, $protocolVersion);
             $message = \Maleficarum\Ioc\Container::get('PhpAmqpLib\Message\AMQPMessage', [$command->toJSON(), ['delivery_mode' => 2, 'application_headers' => $applicationHeaders]]);
             $channel->batch_basic_publish($message, $connection->getExchangeName(), $connection->getQueueName());
         }
